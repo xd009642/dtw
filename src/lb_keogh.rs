@@ -13,7 +13,7 @@ pub struct LbKeoghDtwBuilder {
 pub struct LbKeoghDtw {
     window_size: usize,
     norm: usize,
-    lower_envelope: usize, 
+    lower_envelope: usize,
     force_symmetry: bool,
     error_check: bool,
 }
@@ -24,9 +24,14 @@ impl LbKeoghDtw {
     }
 }
 
-
 impl DynamicTimeWarping for LbKeoghDtw {
-    fn align<T>(reference: &[T], observed: &[T]) -> Alignments {
+    /// Runs alignment for LB Keogh DTW algorithm
+    /// Currently only works on sequences of the same length
+    fn align<T, F>(&self, reference: &[T], observed: &[T], distance: F) -> Alignments
+    where
+        F: Fn(&T, &T) -> f64,
+    {
+        assert_eq!(reference.len(), observed.len());
         unimplemented!()
     }
 }
