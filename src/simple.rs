@@ -6,14 +6,12 @@ use std::f64::INFINITY;
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SimpleDtw {
-    window: usize
+    window: Option<usize>,
 }
 
 impl SimpleDtw {
-    pub fn new(window: usize) -> Self {
-        Self {
-            window
-        }
+    pub fn new(window: Option<usize>) -> Self {
+        Self { window }
     }
 }
 
@@ -24,24 +22,32 @@ impl DynamicTimeWarping for SimpleDtw {
     where
         F: Fn(&T, &T) -> f64,
     {
-        let mut cost = Array::from_shape_fn((reference.len(), observed.len()), |(r, c)| {
-            
-            if (c==0 && r== 0) || 
-                ( c >= max(1, r - self.window) && c < min(observed.len(), r + self.window)) 
-            {
-                0.0f64
-            } else {
-                INFINITY
-            }
-        });
+        if reference.is_empty() || observed.is_empty() {
+            return Default::default();
+        }
+        let window = match self.window {
+            Some(w) => w as isize,
+            None => observed.len() as isize,
+        };
+        let mut cost = Array::from_elem((reference.len(), observed.len()), INFINITY);
+        cost[[0, 0]] = distance(&reference[0], &observed[0]);
 
         for i in 1..reference.len() {
-            for j in max(1, i-self.window)..min(observed.len(), i+self.window) {
-                let temp_cost = distance(&reference[i], &observed[i]);
-                let c0 = FloatOrd(cost[[i-1, j]]);
-                let c1 = FloatOrd(cost[[i, j-1]]);
-                let c2 = FloatOrd(cost[[i-1, j-1]]);
-                let temp_cost = temp_cost + min(c0, min(c1, c2)).0;
+            let lower = max(1, i as isize - window) as usize;
+            let upper = min(observed.len() as isize, i as isize + window) as usize;
+            for j in lower..upper {
+                let temp_cost = distance(&reference[i], &observed[j]);
+                let mut min_cost = FloatOrd(INFINITY);
+                if i > 0 {
+                    min_cost = min(min_cost, FloatOrd(cost[[i - 1, j]]));
+                }
+                if j > 0 {
+                    min_cost = min(min_cost, FloatOrd(cost[[i, j - 1]]));
+                }
+                if i > 0 && j > 0 {
+                    min_cost = min(min_cost, FloatOrd(cost[[i - 1, j - 1]]));
+                }
+                let temp_cost = temp_cost + min_cost.0;
                 cost[[i, j]] = temp_cost;
             }
         }
@@ -49,3 +55,20 @@ impl DynamicTimeWarping for SimpleDtw {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::distances::*;
+
+    #[test]
+    fn easy_test() {
+        let reference = vec![0, 1, 1, 2, 3, 2, 1];
+        let observed = vec![1, 1, 2, 3, 2, 0];
+
+        let dtw = SimpleDtw::new(None);
+
+        let alignments = dtw.align(&reference, &observed, euclidean);
+        let expected_path = vec![(0, 0), (1, 1), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5)];
+        assert_eq!(alignments.warp_path, expected_path);
+    }
+}

@@ -2,14 +2,12 @@ use crate::types::*;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct FastDtw {
-    radius: f64
+    radius: f64,
 }
 
 impl FastDtw {
     pub fn new(radius: f64) -> Self {
-        Self {
-            radius
-        }
+        Self { radius }
     }
 }
 

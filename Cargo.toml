@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 float-ord = "0.2"
 ndarray = "0.13"
+#num-traits = "0.2"

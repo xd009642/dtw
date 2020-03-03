@@ -1,9 +1,13 @@
 use ndarray::{ArrayBase, Data, Ix2};
+use std::f64::INFINITY;
 
 /// Data type representing DTW alignments
+#[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct Alignments {
+    /// Warp path to go to the reference sequence from the observed
     pub(crate) warp_path: Vec<(usize, usize)>,
-    pub warped_path_distance: Option<f64>,
+    /// Sum of distances for the path
+    pub warped_path_distance: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -20,9 +24,45 @@ impl Alignments {
     }
 }
 
-impl<S> From<ArrayBase<S, Ix2>> for Alignments where S: Data<Elem=f64> {
+impl<S> From<ArrayBase<S, Ix2>> for Alignments
+where
+    S: Data<Elem = f64>,
+{
     fn from(cost_mat: ArrayBase<S, Ix2>) -> Self {
-        unimplemented!();
+        let mut result = Alignments::default();
+        let (row, col) = cost_mat.dim();
+        result.warp_path.reserve(std::cmp::max(row, col));
+        let mut row = row as isize;
+        let mut col = col as isize;
+        row -= 1;
+        col -= 1;
+        let get_cost = |r, c| {
+            if r < 0 || c < 0 {
+                INFINITY
+            } else {
+                cost_mat[[r as usize, c as usize]]
+            }
+        };
+        while !(row == 0 && col == 0) {
+            result.warp_path.push((row as usize, col as usize));
+            let c0 = get_cost(row - 1, col);
+            let c1 = get_cost(row - 1, col - 1);
+            let c2 = get_cost(row, col - 1);
+            if c0 < c1 && c0 < c2 {
+                row -= 1;
+                result.warped_path_distance += c0;
+            } else if c1 < c2 {
+                row -= 1;
+                col -= 1;
+                result.warped_path_distance += c1;
+            } else {
+                col -= 1;
+                result.warped_path_distance += c2;
+            }
+        }
+        result.warp_path.push((0, 0));
+        result.warp_path.reverse();
+        result
     }
 }
 
