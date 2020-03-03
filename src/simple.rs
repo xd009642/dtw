@@ -5,13 +5,37 @@ use std::cmp::{max, min};
 use std::f64::INFINITY;
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SimpleDtwBuilder {
+    window: Option<usize>,
+}
+
+impl SimpleDtwBuilder {
+    pub fn window(mut self, len: usize) -> Self {
+        self.window = Some(len);
+        self
+    }
+
+    pub fn build(self) -> SimpleDtw {
+        SimpleDtw {
+            window: self.window,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SimpleDtw {
     window: Option<usize>,
 }
 
+impl Default for SimpleDtw {
+    fn default() -> Self {
+        Self::new().build()
+    }
+}
+
 impl SimpleDtw {
-    pub fn new(window: Option<usize>) -> Self {
-        Self { window }
+    pub fn new() -> SimpleDtwBuilder {
+        Default::default()
     }
 }
 
@@ -75,7 +99,7 @@ mod tests {
         let reference = vec![0, 1, 1, 2, 3, 2, 1];
         let observed = vec![1, 1, 2, 3, 2, 0];
 
-        let dtw = SimpleDtw::new(None);
+        let dtw = SimpleDtw::default();
 
         let alignments = dtw.align(&reference, &observed, euclidean);
         let expected_path = vec![(0, 0), (1, 1), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5)];
