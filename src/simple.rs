@@ -25,16 +25,26 @@ impl DynamicTimeWarping for SimpleDtw {
         if reference.is_empty() || observed.is_empty() {
             return Default::default();
         }
-        let window = match self.window {
-            Some(w) => w as isize,
-            None => observed.len() as isize,
-        };
         let mut cost = Array::from_elem((reference.len(), observed.len()), INFINITY);
         cost[[0, 0]] = distance(&reference[0], &observed[0]);
-
+        if let Some(w) = self.window {
+            for i in 1..reference.len() {
+                let lower = max(1, i as isize - w as isize) as usize;
+                let upper = min(observed.len(), i + w);
+                for j in lower..upper {
+                    cost[[i, j]] = 0.0;
+                }
+            }
+        }
         for i in 1..reference.len() {
-            let lower = max(1, i as isize - window) as usize;
-            let upper = min(observed.len() as isize, i as isize + window) as usize;
+            let (lower, upper) = match self.window {
+                Some(w) => {
+                    let lower = max(1, i as isize - w as isize) as usize;
+                    let upper = min(observed.len(), i + w);
+                    (lower, upper)
+                }
+                None => (1, observed.len()),
+            };
             for j in lower..upper {
                 let temp_cost = distance(&reference[i], &observed[j]);
                 let mut min_cost = FloatOrd(INFINITY);
